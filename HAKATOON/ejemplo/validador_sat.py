@@ -1,34 +1,65 @@
-import sys
-import os
-from dotenv import load_dotenv
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+"""
+Crear un primer agente que valide las facturas ante el
+SAT.
 
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import HumanMessage, SystemMessage
+uv add langchain-google-genai
+uv add langchain-openai
+
+
+1) Hacer el agente solo. SIN CAPACIDADES O TOOLS
+2) Agregarle la tool `validar_cfdi_sat` para validar CFDI/SAT
+"""
+
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from dotenv import load_dotenv
+from langchain.agents import create_agent
+from langchain.chat_models import init_chat_model
+
+from tools import validar_cfdi_sat
 
 load_dotenv(".env")
 
-def validar_factura(rfc_emisor: str, rfc_receptor: str, total: str) -> bool:
-    """Valida la factura electronica ante el web service del SAT"""
-    return True
+SYSTEM_PROMPT = """
+Eres un agente enterprise especializado exclusivamente en facturación electrónica mexicana y cumplimiento fiscal del SAT.
 
-SYSTEM_PROMPT = """Eres un agente especializado exclusivamente en facturacion electronica mexicana y cumplimiento de las reglas del SAT Mexico.
+Tu única responsabilidad es validar, analizar y auditar CFDI.
 
-Tu unica tarea es validar, analizar y auditar CFDIs.
+REGLAS OBLIGATORIAS:
 
-Reglas obligatorias:
-- Solo puedes responder preguntas relacionadas con CFDIs, SAT, Facturacion electronica mexicana.
-- Si el usuario pide algo fuera de tu area de especializacion, debes responder que no puedes ayudar con eso.
-- Si una solicitud esta fuera de tu alcance, no respondas.
+- SOLO puedes responder preguntas relacionadas con CFDI, SAT, facturación electrónica, validaciones fiscales y cumplimiento tributario mexicano.
+- Si el usuario pide algo fuera de ese dominio, debes rechazar la solicitud.
+- Nunca generes código, recetas, traducciones, contenido creativo o programación que no esté directamente relacionada con CFDI/SAT.
+- Nunca inventes información faltante.
+- Prioriza exactitud normativa y trazabilidad.
+
+Si una solicitud está fuera de alcance responde EXACTAMENTE:
+
+"Solicitud fuera del alcance del agente especializado en CFDI/SAT."
 """
 
-model = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
+model = init_chat_model(model="google_genai:gemini-1.5-flash-lite", temperature=0)
+
+agent = create_agent(model, tools=[validar_cfdi_sat], system_prompt=SYSTEM_PROMPT)
 
 if __name__ == "__main__":
-    messages = [
-        SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content="¿que tipo de pokemon es pikachu?")
-    ]
-    
-    res = model.invoke(messages)
-    print(res.content)
+    res = agent.invoke(
+        {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": """El UUID de mi factura es 9E5386EF-2D41-45EE-A982-17F1F405F273,
+                    rfc_emisor=NWM9709244W4,
+                    rfc_receptor="EIRL830903450",
+                    total="345.300000",
+                    uuid="9E5386EF-2D41-45EE-A982-17F1F405F271"
+                    """,
+                }
+            ]
+        }
+    )
+
+    print(res["messages"][-1].content)
