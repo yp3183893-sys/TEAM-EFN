@@ -156,7 +156,7 @@ if __name__ == "__main__":
     # MODELO
     # =====================================================
 
-    modelo = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
+    modelo = ChatGoogleGenerativeAI(model="gemini-flash-latest", temperature=0)
 
     agente = modelo.bind_tools(HERRAMIENTAS)
 

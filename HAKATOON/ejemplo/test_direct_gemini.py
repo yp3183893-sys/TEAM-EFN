@@ -7,7 +7,7 @@ load_dotenv(".env")
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 try:
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-flash-latest')
     response = model.generate_content("Hola, ¿estás funcionando?")
     print(f"Respuesta: {response.text}")
 except Exception as e:
