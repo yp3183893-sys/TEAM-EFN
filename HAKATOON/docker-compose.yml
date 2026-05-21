@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: agro
+      POSTGRES_PASSWORD: agro_pass
+      POSTGRES_DB: agrocrm
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://agro:agro_pass@db:5432/agrocrm
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      RAG_TOP_K: ${RAG_TOP_K:-3}
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    command: >
+      bash -lc "python -m app.scripts.seed_db
+      && python -m app.scripts.train_lead_model
+      && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  postgres_data:

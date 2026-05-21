@@ -1,0 +1,103 @@
+INSTRUCCIONES (Docker) - Base de datos MariaDB + phpMyAdmin
+Proyecto: Karla-estacionamiento (estacionamiento)
+
+Objetivo
+- Levantar MariaDB en Docker y administrarla con phpMyAdmin.
+- Conectar cualquier otro proyecto/app (y por lo tanto “otro chat”) a esa misma base de datos, usando la conexión por localhost.
+
+Requisitos
+- Docker Desktop instalado y corriendo en Windows.
+- PowerShell.
+
+Archivos usados
+- docker-compose: proyecto_estacionamiento\docker\docker-compose.yml
+- esquema SQL: proyecto_estacionamiento\database\esquema.sql
+
+Puertos y accesos
+- MariaDB:
+  - Puerto en Windows (host): 8080
+  - Puerto dentro del contenedor: 3306
+  - Conexión desde apps en tu PC: 127.0.0.1:8080
+- phpMyAdmin:
+  - URL: http://localhost:8081
+
+Credenciales DB (las que define docker-compose.yml)
+- Database: estacionamiento
+- User: user_parking
+- Password: password_parking
+- Root password: root_password
+
+1) Cómo levantar la base de datos (comandos)
+1. Abre PowerShell.
+2. Ve a la carpeta del compose:
+   cd c:\Users\Yp318\OneDrive\Documentos\GitHub\Karla-estacionamiento\proyecto_estacionamiento\docker
+3. Levanta servicios:
+   docker compose up -d
+4. Verifica que estén corriendo:
+   docker ps
+   Debes ver contenedores como:
+   - parking_db  (MariaDB)
+   - parking_pma (phpMyAdmin)
+
+2) Cómo entrar a phpMyAdmin
+- Abre en el navegador:
+  http://localhost:8081
+- Usuario/contraseña:
+  - Puedes usar user_parking / password_parking
+  - O root / root_password (si lo necesitas)
+
+3) Cómo se carga el esquema automáticamente
+- El compose monta el archivo:
+  ..\database\esquema.sql  ->  /docker-entrypoint-initdb.d/esquema.sql
+- Eso significa:
+  - Al crear la base por primera vez, MariaDB ejecuta ese SQL para crear tablas.
+
+Importante sobre “resetear” o recrear todo:
+- Este compose NO define un volumen para /var/lib/mysql.
+- Por eso, si eliminas el contenedor de MariaDB, se pierden los datos y el esquema se volverá a cargar desde esquema.sql al levantarlo de nuevo.
+
+4) Cómo resetear la base (borrar todo y recrear)
+1. Baja contenedores:
+   docker compose down
+2. Borra contenedores si hiciera falta (opcional, normalmente down basta):
+   docker rm -f parking_db parking_pma
+3. Levanta de nuevo:
+   docker compose up -d
+
+5) Cómo conectar OTRO proyecto/app a esta base (la parte clave)
+Tu otro proyecto NO necesita “copiar” el contenedor, solo necesita conectarse al mismo MariaDB ya levantado.
+
+Datos de conexión desde Windows (host):
+- host: 127.0.0.1
+- port: 8080
+- database: estacionamiento
+- user: user_parking
+- password: password_parking
+
+Ejemplo Python (mysql-connector):
+    import mysql.connector
+    conn = mysql.connector.connect(
+        host="127.0.0.1",
+        port=8080,
+        user="user_parking",
+        password="password_parking",
+        database="estacionamiento",
+    )
+
+Si tu otro proyecto también usa Docker:
+- Evita choque de puertos:
+  - Si ese proyecto también quiere exponer MariaDB, usa otros puertos (ej. 8090:3306),
+    o simplemente NO levantes otra MariaDB y reutiliza ésta conectándote a 127.0.0.1:8080.
+
+6) “Pasar contexto” a otro chat (cómo hacerlo práctico)
+En el nuevo chat, di:
+- “Voy a usar MariaDB en Docker ya levantado en mi PC”
+- “Conéctate a 127.0.0.1:8080 con user_parking/password_parking y DB estacionamiento”
+- “phpMyAdmin está en http://localhost:8081”
+- “El esquema está en proyecto_estacionamiento\\database\\esquema.sql”
+
+Checklist rápido
+- docker compose up -d (en proyecto_estacionamiento\\docker)
+- Abre http://localhost:8081 (phpMyAdmin)
+- Tu app se conecta a 127.0.0.1:8080
+
