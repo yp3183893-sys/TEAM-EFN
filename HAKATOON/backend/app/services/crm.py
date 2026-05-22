@@ -1,10 +1,35 @@
 from datetime import datetime
+import os
 
+import requests
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.customer import Customer
 from app.models.prospect import Prospect
+
+
+def upsert_contact_to_hubspot(*, name: str, phone: str, jobtitle: str | None) -> dict | None:
+    api_key = os.getenv("HUBSPOT_API_KEY")
+    if not api_key:
+        return None
+
+    payload = {"properties": {"firstname": name, "phone": phone}}
+    if jobtitle:
+        payload["properties"]["jobtitle"] = jobtitle
+
+    resp = requests.post(
+        "https://api.hubapi.com/crm/v3/objects/contacts",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
+        timeout=10,
+    )
+    if 200 <= resp.status_code < 300:
+        return resp.json()
+    return None
 
 
 class CRMService:
@@ -33,6 +58,12 @@ class CRMService:
         return prospect
 
     def update_prospect_status(self, db: Session, customer_id: int, status: str, last_intent: str | None) -> Prospect:
+        customer = db.scalar(select(Customer).where(Customer.id == customer_id))
+        if customer is not None:
+            try:
+                upsert_contact_to_hubspot(name=customer.name, phone=customer.phone, jobtitle=last_intent)
+            except Exception:
+                pass
         prospect = self.get_or_create_prospect(db, customer_id=customer_id)
         prospect.status = status
         prospect.last_intent = last_intent

@@ -13,11 +13,14 @@ services:
   backend:
     build:
       context: ./backend
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql+psycopg://agro:agro_pass@db:5432/agrocrm
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       RAG_TOP_K: ${RAG_TOP_K:-3}
+      HUBSPOT_API_KEY: ${HUBSPOT_API_KEY:-}
     depends_on:
       - db
     ports:
@@ -26,6 +29,16 @@ services:
       bash -lc "python -m app.scripts.seed_db
       && python -m app.scripts.train_lead_model
       && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      VITE_PROXY_TARGET: http://backend:8000
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
 
 volumes:
   postgres_data:

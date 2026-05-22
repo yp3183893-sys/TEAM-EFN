@@ -1,7 +1,11 @@
 import os
 import json
 from dataclasses import dataclass
-import google.generativeai as genai
+
+try:
+    import google.generativeai as genai
+except Exception:
+    genai = None
 
 # Mantenemos la estructura original para no romper webhook.py
 @dataclass(frozen=True)
@@ -14,7 +18,7 @@ class LLMIntentExtractor:
         self._client_ready = False
         api_key = os.getenv("GEMINI_API_KEY")
         
-        if api_key:
+        if api_key and genai is not None:
             try:
                 # Configuramos Gemini en lugar de OpenAI
                 genai.configure(api_key=api_key)
@@ -29,8 +33,7 @@ class LLMIntentExtractor:
         if not self._client_ready:
             return self._extract_mock(text_norm)
             
-      
-       # --- EL CEREBRO AGRÍCOLA (AGROCAPITAL & FIRA) ---
+        # --- EL CEREBRO AGRÍCOLA (AGROCAPITAL & FIRA) ---
         prompt = f"""
         Eres un asistente inteligente especializado exclusivamente en procesos de financiamiento rural, agropecuario y empresarial relacionados con AgroCapital y las condiciones de operación de FIRA.
 
@@ -40,11 +43,11 @@ class LLMIntentExtractor:
         1. SOLO debes procesar temas relacionados con: financiamiento, créditos, FIRA, actividades agropecuarias, capital de trabajo, inversión fija y requisitos.
         2. NO proceses temas personales, política, médicos, ni ajenos al negocio.
         3. Debes validar la prioridad según la actividad, destino del crédito, monto y ubicación.
-
         Opciones de 'intent' válidas para clasificar:
         - "cotizacion_credito" (Pide simulación de crédito, montos o tasas).
         - "validacion_fira" (Pregunta por requisitos, elegibilidad o reglas de FIRA).
         - "seguimiento" (Envía documentos o pregunta por el estatus de su trámite).
+        - "fuera_de_contexto" (Pregunta por cosas que no son financiamiento rural).
         - "fuera_de_contexto" (Pregunta por cosas que no son financiamiento rural).
 
         Opciones de 'target_status' válidas para el CRM:
@@ -68,8 +71,7 @@ class LLMIntentExtractor:
                 intent=data.get("intent", "otro"),
                 target_status=data.get("target_status", "Lead Nuevo")
             )
-        except Exception as e:
-            print(f"Error procesando con Gemini: {e}")
+        except Exception:
             return self._extract_mock(text_norm)
             
     def _extract_mock(self, text: str) -> IntentResult:
@@ -81,3 +83,23 @@ class LLMIntentExtractor:
 
 # Instanciamos la clase para que webhook.py pueda importarla (línea clave)
 intent_extractor = LLMIntentExtractor()
+
+
+def main() -> None:
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(prog="python -m app.services.llm")
+    parser.add_argument("text", nargs="?", help="Mensaje del cliente (si no se pasa, se lee de stdin)")
+    args = parser.parse_args()
+
+    text = args.text
+    if text is None:
+        text = sys.stdin.read().strip()
+
+    result = intent_extractor.extract(text)
+    print(json.dumps({"intent": result.intent, "target_status": result.target_status}, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()
