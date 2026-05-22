@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.health import router as health_router
 from app.api.routes.webhook import router as webhook_router
@@ -11,6 +12,15 @@ from app.services.rag import rag_store
 
 def create_app() -> FastAPI:
     api = FastAPI(title="Agro B2B Sales Agent (MVP)", version="0.1.0")
+
+    api.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     api.include_router(health_router)
     api.include_router(webhook_router)
 
