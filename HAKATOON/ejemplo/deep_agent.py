@@ -1,9 +1,7 @@
-import os
-import sys
 from typing import List
 
 from dotenv import load_dotenv
-from langchain.chat_models import init_chat_model
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import (
     HumanMessage,
     SystemMessage,
@@ -11,20 +9,18 @@ from langchain_core.messages import (
 )
 from langchain_core.tools import tool
 
+from tools import (
+    agregar_nota_auditoria,
+    consultar_cfdi,
+    listar_cfdi,
+    validar_cfdi_sat,
+)
+
 # =========================================================
 # CONFIGURACIÓN
 # =========================================================
 
 load_dotenv(".env")
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from tools.tools import (
-    agregar_nota_auditoria,
-    consultar_cfdi,
-    listar_cfdi,
-)
-from tools.validar_factura import validar_cfdi_sat
 
 # =========================================================
 # LISTA SIMPLE DE TAREAS
@@ -160,7 +156,7 @@ if __name__ == "__main__":
     # MODELO
     # =====================================================
 
-    modelo = init_chat_model(model="openai:gpt-4o-mini", temperature=0)
+    modelo = ChatGoogleGenerativeAI(model="gemini-flash-latest", temperature=0)
 
     agente = modelo.bind_tools(HERRAMIENTAS)
 

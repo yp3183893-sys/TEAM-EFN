@@ -17,7 +17,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dotenv import load_dotenv
 from langchain.agents import create_agent
-from langchain.chat_models import init_chat_model
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from tools import validar_cfdi_sat
 
@@ -41,7 +41,7 @@ Si una solicitud está fuera de alcance responde EXACTAMENTE:
 "Solicitud fuera del alcance del agente especializado en CFDI/SAT."
 """
 
-model = init_chat_model(model="google_genai:gemini-1.5-flash-lite", temperature=0)
+model = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
 
 agent = create_agent(model, tools=[validar_cfdi_sat], system_prompt=SYSTEM_PROMPT)
 
